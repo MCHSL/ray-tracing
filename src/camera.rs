@@ -4,6 +4,7 @@ use rand::distributions::{Distribution, Uniform};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
+    math::random,
     object::Object,
     ray::{Color, Ray},
     vector::VecExt,
@@ -20,6 +21,7 @@ pub struct CameraConfig {
     pub vector_up: Vec3,
     pub focus_distance: f32,
     pub defocus_angle: f32,
+    pub skybox: Color,
 }
 
 impl Default for CameraConfig {
@@ -35,6 +37,7 @@ impl Default for CameraConfig {
             vector_up: vec3(0.0, 1.0, 0.0),
             focus_distance: 10.0,
             defocus_angle: 0.0,
+            skybox: Color::new(0xAD as f32 / 255., 0xD8 as f32 / 255., 0xE6 as f32 / 255.),
         }
     }
 }
@@ -54,6 +57,8 @@ pub struct Camera {
     defocus_angle: f32,
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
+
+    skybox: Color,
 }
 
 fn linear_to_gamma(linear: f32) -> f32 {
@@ -73,6 +78,7 @@ impl Camera {
             vector_up,
             focus_distance,
             defocus_angle,
+            skybox,
         } = config;
 
         let image_height = (image_width as f32 / aspect_ratio) as u32;
@@ -114,6 +120,7 @@ impl Camera {
             defocus_angle,
             defocus_disk_u,
             defocus_disk_v,
+            skybox,
         }
     }
 
@@ -128,8 +135,9 @@ impl Camera {
             self.defocus_disk_sample()
         };
         let ray_direction = pixel_sample - ray_origin;
+        let ray_time = random();
 
-        Ray::new(ray_origin, ray_direction)
+        Ray::new(ray_origin, ray_direction, ray_time)
     }
 
     fn defocus_disk_sample(&self) -> Vec3 {
@@ -146,7 +154,7 @@ impl Camera {
         (px * self.pixel_delta_u) + (py * self.pixel_delta_v)
     }
 
-    fn ray_color<T: Object>(ray: Ray, bounces_left: u32, hittable: &T) -> Color {
+    fn ray_color<T: Object>(&self, ray: Ray, bounces_left: u32, hittable: &T) -> Color {
         if bounces_left == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -155,15 +163,18 @@ impl Camera {
             if let Some(scatter) = hit.material.scatter(ray, &hit) {
                 return Color::from(
                     scatter.attenuation.0
-                        * Self::ray_color(scatter.new_ray, bounces_left - 1, hittable).0,
+                        * self
+                            .ray_color(scatter.new_ray, bounces_left - 1, hittable)
+                            .0,
                 );
             }
             return Color::new(0.0, 0.0, 0.0);
         }
 
-        let unit_direction = ray.direction.normalize();
-        let a = 0.5 * (unit_direction.y + 1.0);
-        Color::new(1.0, 1.0, 1.0) * (1.0 - a) + Color::new(0.5, 0.7, 1.0) * a
+        // let unit_direction = ray.direction.normalize();
+        // let a = 0.5 * (unit_direction.y + 1.0);
+        // Color::new(1.0, 1.0, 1.0) * (1.0 - a) + Color::new(0.5, 0.7, 1.0) * a
+        self.skybox
     }
 
     pub fn render<T: Object + Sync>(&self, world: &T) -> image::RgbImage {
@@ -177,7 +188,7 @@ impl Camera {
                     let mut c = Vec3::ZERO;
                     for _ in 0..self.samples_per_pixel {
                         let ray = self.create_ray(x as f32, y as f32);
-                        c += Self::ray_color(ray, self.max_bounces, world).0;
+                        c += self.ray_color(ray, self.max_bounces, world).0;
                     }
 
                     let c = c / self.samples_per_pixel as f32;

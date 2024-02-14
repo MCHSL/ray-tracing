@@ -3,6 +3,7 @@ use glam::Vec3;
 use crate::{
     math::random,
     ray::{Color, HitRecord, Ray},
+    texture::{SolidColor, Texture},
     vector::VecExt,
 };
 
@@ -16,37 +17,48 @@ pub trait Material: Send + Sync {
 }
 
 pub struct Lambertian {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Color) -> Box<Self> {
-        Box::new(Self { albedo })
+    pub fn new(texture: Box<dyn Texture>) -> Box<Self> {
+        Box::new(Self { albedo: texture })
+    }
+
+    pub fn solid_color(color: Color) -> Box<Self> {
+        Self::new(SolidColor::new(color))
     }
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
+    fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
         let mut direction = hit.normal + Vec3::random_unit();
         if direction.near_zero() {
             direction = hit.normal;
         }
-        let scattered = Ray::new(hit.point, direction);
+        let scattered = Ray::new(hit.point, direction, incoming.time);
         Some(ScatterResult {
-            attenuation: self.albedo,
+            attenuation: self.albedo.value(hit.u, hit.v, hit.point),
             new_ray: scattered,
         })
     }
 }
 
 pub struct Metal {
-    pub albedo: Color,
+    pub albedo: Box<dyn Texture>,
     pub fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: Color, fuzz: f32) -> Box<Self> {
-        Box::new(Self { albedo, fuzz })
+    pub fn new(texture: Box<dyn Texture>, fuzz: f32) -> Box<Self> {
+        Box::new(Self {
+            albedo: texture,
+            fuzz,
+        })
+    }
+
+    pub fn solid_color(color: Color, fuzz: f32) -> Box<Self> {
+        Self::new(SolidColor::new(color), fuzz)
     }
 }
 
@@ -56,9 +68,10 @@ impl Material for Metal {
         let new_ray = Ray::new(
             hit.point,
             reflection_direction + self.fuzz * Vec3::random_unit(),
+            incoming.time,
         );
         Some(ScatterResult {
-            attenuation: self.albedo,
+            attenuation: self.albedo.value(hit.u, hit.v, hit.point),
             new_ray,
         })
     }
@@ -101,7 +114,7 @@ impl Material for Dielectric {
                 unit_direction.refract(hit.normal, refraction_ratio)
             };
 
-        let new_ray = Ray::new(hit.point, direction);
+        let new_ray = Ray::new(hit.point, direction, incoming.time);
 
         Some(ScatterResult {
             attenuation: Color::new(1.0, 1.0, 1.0),

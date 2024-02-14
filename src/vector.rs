@@ -1,19 +1,17 @@
-use std::ops::Range;
-
 use glam::{vec3, Vec3};
 use rand::distributions::{Distribution, Uniform};
 
-use crate::math::random_range;
+use crate::{common::Interval, math::random_range};
 
 pub trait VecExt {
     fn random() -> Self;
-    fn random_range(range: Range<f32>) -> Self;
+    fn random_range(range: Interval) -> Self;
     fn random_in_unit_sphere() -> Self;
     fn random_unit() -> Self;
     fn random_in_unit_disk() -> Self;
     fn near_zero(&self) -> bool;
     fn reflect(&self, normal: Self) -> Self;
-    fn refract(&self, normal: Self, etai_over_etat: f32) -> Self;
+    fn refract(&self, normal: Self, refraction_index: f32) -> Self;
 }
 
 impl VecExt for Vec3 {
@@ -21,7 +19,7 @@ impl VecExt for Vec3 {
         Self::random_range(0.0..1.0)
     }
 
-    fn random_range(range: Range<f32>) -> Vec3 {
+    fn random_range(range: Interval) -> Vec3 {
         let mut rng = rand::thread_rng();
         let uniform = Uniform::from(range);
         let x = uniform.sample(&mut rng);
