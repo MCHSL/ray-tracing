@@ -1,0 +1,13 @@
+[package]
+name = "rtx"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+derive_more = "0.99.17"
+fltk = "1.4.24"
+glam = "0.25.0"
+image = "0.24.8"
+ord_subset = "3.1.1"
+rand = "0.8.5"
+show-image = { version = "0.13.1", features = ["image"] }
