@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use camera::Camera;
+use camera::{Camera, CameraConfig};
 use glam::vec3;
 use material::{Dielectric, Lambertian, Metal};
 use object::{Sphere, World};
@@ -20,9 +20,7 @@ mod vector;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut world = World::new();
 
-    let ground_material = Rc::new(Lambertian {
-        albedo: Color::new(0.5, 0.5, 0.5),
-    });
+    let ground_material = Lambertian::new(Color::new(0.5, 0.5, 0.5));
 
     world.add(Sphere {
         center: vec3(0.0, -1000.0, 0.0),
@@ -41,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if material_choice < 0.8 {
                 let albedo = Color::from(Color::random().0 * Color::random().0);
-                let material = Rc::new(Lambertian { albedo });
+                let material = Lambertian::new(albedo);
                 world.add(Sphere {
                     center,
                     radius: 0.2,
@@ -50,16 +48,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if material_choice < 0.95 {
                 let albedo = Color::random();
                 let fuzz = random_range(0.0..0.5);
-                let material = Rc::new(Metal { albedo, fuzz });
+                let material = Metal::new(albedo, fuzz);
                 world.add(Sphere {
                     center,
                     radius: 0.2,
                     material,
                 })
             } else {
-                let material = Rc::new(Dielectric {
-                    refraction_index: 1.5,
-                });
+                let material = Dielectric::new(1.5);
                 world.add(Sphere {
                     center,
                     radius: 0.2,
@@ -69,51 +65,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let material = Rc::new(Dielectric {
-        refraction_index: 1.5,
-    });
     world.add(Sphere {
         center: vec3(0.0, 1.0, 0.0),
         radius: 1.0,
-        material,
+        material: Dielectric::new(1.5),
     });
 
-    let material = Rc::new(Lambertian {
-        albedo: Color::new(0.4, 0.2, 0.1),
-    });
     world.add(Sphere {
         center: vec3(-4.0, 1.0, 0.0),
         radius: 1.0,
-        material,
+        material: Lambertian::new(Color::new(0.4, 0.2, 0.1)),
     });
 
-    let material = Rc::new(Metal {
-        albedo: Color::new(0.7, 0.6, 0.5),
-        fuzz: 0.1,
-    });
     world.add(Sphere {
         center: vec3(4.0, 1.0, 0.0),
         radius: 1.0,
-        material,
+        material: Metal::new(Color::new(0.7, 0.6, 0.5), 0.1),
     });
 
     let vfov = 20.0;
     let look_from = vec3(13.0, 2.0, 3.0);
     let look_at = vec3(0.0, 0.0, 0.0);
-    let vector_up = vec3(0.0, 1.0, 0.0);
 
-    let camera = Camera::new(
-        16.0 / 9.0,
-        1200,
-        50,
-        50,
+    let camera = Camera::new(CameraConfig {
+        image_width: 800,
+        samples_per_pixel: 50,
+        defocus_angle: 0.6,
         vfov,
         look_from,
         look_at,
-        vector_up,
-        10.0,
-        0.6,
-    );
+        ..Default::default()
+    });
     let image = camera.render(&world);
 
     image.save("image.png").unwrap();

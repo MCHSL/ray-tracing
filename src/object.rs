@@ -1,20 +1,19 @@
-use std::{ops::Range, rc::Rc};
-
-use glam::Vec3;
+use std::{ops::Range, sync::Arc};
 
 use crate::{
     material::Material,
     ray::{HitRecord, Ray},
 };
+use glam::Vec3;
 
-pub trait Object {
+pub trait Object: Send + Sync {
     fn hit(&self, ray: Ray, range: &Range<f32>) -> Option<HitRecord>;
 }
 
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
-    pub material: Rc<dyn Material>,
+    pub material: Box<dyn Material>,
 }
 
 impl Object for Sphere {
@@ -48,7 +47,7 @@ impl Object for Sphere {
             point,
             normal,
             root,
-            self.material.clone(),
+            self.material.as_ref(),
         ))
     }
 }

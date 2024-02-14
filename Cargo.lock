@@ -1452,6 +1452,7 @@ dependencies = [
  "image",
  "ord_subset",
  "rand",
+ "rayon",
  "show-image",
 ]
 

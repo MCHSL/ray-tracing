@@ -11,12 +11,18 @@ pub struct ScatterResult {
     pub new_ray: Ray,
 }
 
-pub trait Material {
+pub trait Material: Send + Sync {
     fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult>;
 }
 
 pub struct Lambertian {
     pub albedo: Color,
+}
+
+impl Lambertian {
+    pub fn new(albedo: Color) -> Box<Self> {
+        Box::new(Self { albedo })
+    }
 }
 
 impl Material for Lambertian {
@@ -38,6 +44,12 @@ pub struct Metal {
     pub fuzz: f32,
 }
 
+impl Metal {
+    pub fn new(albedo: Color, fuzz: f32) -> Box<Self> {
+        Box::new(Self { albedo, fuzz })
+    }
+}
+
 impl Material for Metal {
     fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
         let reflection_direction = incoming.direction.normalize().reflect(hit.normal);
@@ -54,6 +66,12 @@ impl Material for Metal {
 
 pub struct Dielectric {
     pub refraction_index: f32,
+}
+
+impl Dielectric {
+    pub fn new(refraction_index: f32) -> Box<Self> {
+        Box::new(Self { refraction_index })
+    }
 }
 
 impl Dielectric {

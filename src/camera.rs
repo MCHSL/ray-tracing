@@ -1,12 +1,43 @@
-use glam::Vec3;
+use glam::{vec3, Vec3};
 use image::{ImageBuffer, Rgb};
 use rand::distributions::{Distribution, Uniform};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     object::Object,
     ray::{Color, Ray},
     vector::VecExt,
 };
+
+pub struct CameraConfig {
+    pub aspect_ratio: f32,
+    pub image_width: u32,
+    pub samples_per_pixel: u32,
+    pub max_bounces: u32,
+    pub vfov: f32,
+    pub look_from: Vec3,
+    pub look_at: Vec3,
+    pub vector_up: Vec3,
+    pub focus_distance: f32,
+    pub defocus_angle: f32,
+}
+
+impl Default for CameraConfig {
+    fn default() -> Self {
+        Self {
+            aspect_ratio: 16.0 / 9.0,
+            image_width: 400,
+            samples_per_pixel: 10,
+            max_bounces: 50,
+            vfov: 90.0,
+            look_from: vec3(0.0, 0.0, 0.0),
+            look_at: vec3(0.0, 0.0, 2.0),
+            vector_up: vec3(0.0, 1.0, 0.0),
+            focus_distance: 10.0,
+            defocus_angle: 0.0,
+        }
+    }
+}
 
 pub struct Camera {
     image_width: u32,
@@ -30,18 +61,20 @@ fn linear_to_gamma(linear: f32) -> f32 {
 }
 
 impl Camera {
-    pub fn new(
-        aspect_ratio: f32,
-        image_width: u32,
-        samples_per_pixel: u32,
-        max_bounces: u32,
-        vfov: f32,
-        look_from: Vec3,
-        look_at: Vec3,
-        vector_up: Vec3,
-        focus_distance: f32,
-        defocus_angle: f32,
-    ) -> Self {
+    pub fn new(config: CameraConfig) -> Self {
+        let CameraConfig {
+            aspect_ratio,
+            image_width,
+            samples_per_pixel,
+            max_bounces,
+            vfov,
+            look_from,
+            look_at,
+            vector_up,
+            focus_distance,
+            defocus_angle,
+        } = config;
+
         let image_height = (image_width as f32 / aspect_ratio) as u32;
 
         let center = look_from;
@@ -133,33 +166,34 @@ impl Camera {
         Color::new(1.0, 1.0, 1.0) * (1.0 - a) + Color::new(0.5, 0.7, 1.0) * a
     }
 
-    pub fn render<T: Object>(&self, world: &T) -> image::RgbImage {
+    pub fn render<T: Object + Sync>(&self, world: &T) -> image::RgbImage {
         let mut buffer: image::RgbImage = ImageBuffer::new(self.image_width, self.image_height);
 
-        let to_render = (self.image_width * self.image_height) as usize;
+        buffer
+            .enumerate_rows_mut()
+            .par_bridge()
+            .for_each(|(row_index, row)| {
+                row.for_each(|(x, y, pixel)| {
+                    let mut c = Vec3::ZERO;
+                    for _ in 0..self.samples_per_pixel {
+                        let ray = self.create_ray(x as f32, y as f32);
+                        c += Self::ray_color(ray, self.max_bounces, world).0;
+                    }
 
-        for (i, (x, y, pixel)) in buffer.enumerate_pixels_mut().enumerate() {
-            let mut c = Vec3::ZERO;
-            for _ in 0..self.samples_per_pixel {
-                let ray = self.create_ray(x as f32, y as f32);
-                c += Self::ray_color(ray, self.max_bounces, world).0;
-            }
+                    let c = c / self.samples_per_pixel as f32;
 
-            let c = c / self.samples_per_pixel as f32;
+                    *pixel = Rgb([
+                        (linear_to_gamma(c.x) * 255.0) as u8,
+                        (linear_to_gamma(c.y) * 255.0) as u8,
+                        (linear_to_gamma(c.z) * 255.0) as u8,
+                    ]);
+                });
 
-            *pixel = Rgb([
-                (linear_to_gamma(c.x) * 255.0) as u8,
-                (linear_to_gamma(c.y) * 255.0) as u8,
-                (linear_to_gamma(c.z) * 255.0) as u8,
-            ]);
-
-            if i % 100 == 0 {
                 print!(
                     "\rRendering... {:.0}%",
-                    (i as f32 / to_render as f32) * 100.0
+                    (row_index as f32 / self.image_height as f32) * 100.0
                 );
-            }
-        }
+            });
 
         buffer
     }

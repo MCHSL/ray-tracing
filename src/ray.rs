@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use derive_more::{Add, From, Mul};
 use glam::Vec3;
@@ -34,21 +34,21 @@ impl Ray {
     }
 }
 
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub point: Vec3,
     pub normal: Vec3,
-    pub material: Rc<dyn Material>,
+    pub material: &'a dyn Material,
     pub t: f32,
     pub front_face: bool,
 }
 
-impl HitRecord {
+impl<'a> HitRecord<'a> {
     pub fn new(
         ray: Ray,
         point: Vec3,
         outward_normal: Vec3,
         t: f32,
-        material: Rc<dyn Material>,
+        material: &'a dyn Material,
     ) -> Self {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         let normal = if front_face {
