@@ -2,7 +2,7 @@ use std::env;
 
 use camera::{Camera, CameraConfig};
 use glam::vec3;
-use material::{Dielectric, Lambertian, Metal};
+use material::{Dielectric, Lambertian, Light, Metal};
 use math::{random, random_range};
 use object::{ObjectCollection, Sphere};
 use ray::Color;
@@ -25,7 +25,8 @@ mod vector;
 fn random_balls() -> (Camera, BVHNode) {
     let mut world = ObjectCollection::new();
 
-    let checkers = CheckerTexture::new(0.32, Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
+    let checkers =
+        CheckerTexture::with_colors(0.32, Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
     let ground_material = Lambertian::new(checkers);
 
     world.add(Sphere::new(
@@ -68,8 +69,8 @@ fn random_balls() -> (Camera, BVHNode) {
 
     world.add(Sphere::new(
         vec3(4.0, 1.0, 0.0),
-        1.0,
-        Metal::solid_color(Color::new(0.7, 0.6, 0.5), 0.1),
+        0.1,
+        Light::solid_color(Color::new(0.7, 0.6, 0.5)), //Metal::solid_color(Color::new(0.7, 0.6, 0.5), 0.1),
     ));
 
     let world = BVHNode::new(world.objects());
@@ -79,8 +80,8 @@ fn random_balls() -> (Camera, BVHNode) {
     let look_at = vec3(0.0, 0.0, 0.0);
 
     let camera = Camera::new(CameraConfig {
-        image_width: 1200,
-        samples_per_pixel: 100,
+        image_width: 800,
+        samples_per_pixel: 1024,
         defocus_angle: 0.6,
         vfov,
         look_from,
@@ -106,8 +107,8 @@ fn earth() -> (Camera, BVHNode) {
     let look_at = vec3(0.0, 1.0, 0.0);
 
     let camera = Camera::new(CameraConfig {
-        image_width: 1080,
-        samples_per_pixel: 100,
+        image_width: 2560,
+        samples_per_pixel: 2048,
         defocus_angle: 0.0,
         vfov,
         look_from,

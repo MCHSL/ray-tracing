@@ -161,19 +161,18 @@ impl Camera {
 
         if let Some(hit) = hittable.hit(ray, &(0.001..f32::MAX)) {
             if let Some(scatter) = hit.material.scatter(ray, &hit) {
-                return Color::from(
-                    scatter.attenuation.0
-                        * self
-                            .ray_color(scatter.new_ray, bounces_left - 1, hittable)
-                            .0,
-                );
+                if let Some(new_ray) = scatter.new_ray {
+                    return Color::from(
+                        scatter.attenuation.0
+                            * self.ray_color(new_ray, bounces_left - 1, hittable).0
+                            * scatter.luminosity,
+                    );
+                }
+                return scatter.attenuation * scatter.luminosity;
             }
             return Color::new(0.0, 0.0, 0.0);
         }
 
-        // let unit_direction = ray.direction.normalize();
-        // let a = 0.5 * (unit_direction.y + 1.0);
-        // Color::new(1.0, 1.0, 1.0) * (1.0 - a) + Color::new(0.5, 0.7, 1.0) * a
         self.skybox
     }
 

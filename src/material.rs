@@ -9,28 +9,31 @@ use crate::{
 
 pub struct ScatterResult {
     pub attenuation: Color,
-    pub new_ray: Ray,
+    pub luminosity: f32,
+    pub new_ray: Option<Ray>,
 }
 
 pub trait Material: Send + Sync {
     fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult>;
 }
 
-pub struct Lambertian {
-    pub albedo: Box<dyn Texture>,
+pub struct Lambertian<T: Texture> {
+    pub albedo: T,
 }
 
-impl Lambertian {
-    pub fn new(texture: Box<dyn Texture>) -> Box<Self> {
-        Box::new(Self { albedo: texture })
+impl<T: Texture> Lambertian<T> {
+    pub fn new(texture: T) -> Self {
+        Self { albedo: texture }
     }
+}
 
-    pub fn solid_color(color: Color) -> Box<Self> {
+impl Lambertian<SolidColor> {
+    pub fn solid_color(color: Color) -> Self {
         Self::new(SolidColor::new(color))
     }
 }
 
-impl Material for Lambertian {
+impl<T: Texture> Material for Lambertian<T> {
     fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
         let mut direction = hit.normal + Vec3::random_unit();
         if direction.near_zero() {
@@ -39,30 +42,33 @@ impl Material for Lambertian {
         let scattered = Ray::new(hit.point, direction, incoming.time);
         Some(ScatterResult {
             attenuation: self.albedo.value(hit.u, hit.v, hit.point),
-            new_ray: scattered,
+            luminosity: 1.0,
+            new_ray: Some(scattered),
         })
     }
 }
 
-pub struct Metal {
-    pub albedo: Box<dyn Texture>,
+pub struct Metal<T: Texture> {
+    pub albedo: T,
     pub fuzz: f32,
 }
 
-impl Metal {
-    pub fn new(texture: Box<dyn Texture>, fuzz: f32) -> Box<Self> {
-        Box::new(Self {
+impl<T: Texture> Metal<T> {
+    pub fn new(texture: T, fuzz: f32) -> Self {
+        Self {
             albedo: texture,
             fuzz,
-        })
+        }
     }
+}
 
-    pub fn solid_color(color: Color, fuzz: f32) -> Box<Self> {
+impl Metal<SolidColor> {
+    pub fn solid_color(color: Color, fuzz: f32) -> Self {
         Self::new(SolidColor::new(color), fuzz)
     }
 }
 
-impl Material for Metal {
+impl<T: Texture> Material for Metal<T> {
     fn scatter(&self, incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
         let reflection_direction = incoming.direction.normalize().reflect(hit.normal);
         let new_ray = Ray::new(
@@ -72,7 +78,8 @@ impl Material for Metal {
         );
         Some(ScatterResult {
             attenuation: self.albedo.value(hit.u, hit.v, hit.point),
-            new_ray,
+            luminosity: 1.0,
+            new_ray: Some(new_ray),
         })
     }
 }
@@ -82,8 +89,8 @@ pub struct Dielectric {
 }
 
 impl Dielectric {
-    pub fn new(refraction_index: f32) -> Box<Self> {
-        Box::new(Self { refraction_index })
+    pub fn new(refraction_index: f32) -> Self {
+        Self { refraction_index }
     }
 }
 
@@ -118,7 +125,34 @@ impl Material for Dielectric {
 
         Some(ScatterResult {
             attenuation: Color::new(1.0, 1.0, 1.0),
-            new_ray,
+            luminosity: 1.0,
+            new_ray: Some(new_ray),
+        })
+    }
+}
+
+pub struct Light<T: Texture> {
+    albedo: T,
+}
+
+impl<T: Texture> Light<T> {
+    pub fn new(texture: T) -> Self {
+        Self { albedo: texture }
+    }
+}
+
+impl Light<SolidColor> {
+    pub fn solid_color(color: Color) -> Self {
+        Self::new(SolidColor::new(color))
+    }
+}
+
+impl<T: Texture> Material for Light<T> {
+    fn scatter(&self, _incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
+        Some(ScatterResult {
+            attenuation: self.albedo.value(hit.u, hit.v, hit.point),
+            luminosity: 64.0,
+            new_ray: None,
         })
     }
 }

@@ -13,16 +13,16 @@ pub trait Object: Send + Sync {
     fn bounding_box(&self) -> &Aabb;
 }
 
-pub struct Sphere {
+pub struct Sphere<M: Material> {
     pub start_center: Vec3,
     pub movement_vector: Vec3,
     pub radius: f32,
-    pub material: Box<dyn Material>,
+    pub material: M,
     pub bbox: Aabb,
 }
 
-impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Box<dyn Material>) -> Self {
+impl<M: Material> Sphere<M> {
+    pub fn new(center: Vec3, radius: f32, material: M) -> Self {
         let rbox = vec3(radius, radius, radius);
         Self {
             start_center: center,
@@ -33,7 +33,7 @@ impl Sphere {
         }
     }
 
-    pub fn moving(start: Vec3, end: Vec3, radius: f32, material: Box<dyn Material>) -> Self {
+    pub fn moving(start: Vec3, end: Vec3, radius: f32, material: M) -> Self {
         let rbox = vec3(radius, radius, radius);
         let start_box = Aabb::from_points(start - rbox, start + rbox);
         let end_box = Aabb::from_points(end - rbox, end + rbox);
@@ -60,7 +60,7 @@ impl Sphere {
     }
 }
 
-impl Object for Sphere {
+impl<M: Material> Object for Sphere<M> {
     fn hit(&self, ray: Ray, range: &Interval) -> Option<HitRecord> {
         let oc = ray.origin - self.center(ray.time);
         let a = ray.direction.length_squared();
@@ -92,7 +92,7 @@ impl Object for Sphere {
             point,
             normal,
             root,
-            self.material.as_ref(),
+            &self.material,
             u,
             v,
         ))
