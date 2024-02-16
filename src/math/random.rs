@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use rand::distributions::{Distribution, Uniform};
 
-use crate::common::Interval;
+use super::Interval;
 
 pub fn random_range(range: Interval) -> f32 {
     let mut rng = rand::thread_rng();

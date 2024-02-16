@@ -1,26 +1,19 @@
 use std::env;
 
-use camera::{Camera, CameraConfig};
 use glam::vec3;
-use material::{Dielectric, Lambertian, Light, Metal};
 use math::{random, random_range};
-use object::{ObjectCollection, Sphere};
-use ray::Color;
+use object::{bvh::BVHNode, collection::ObjectCollection, types::Sphere};
+use rendering::{
+    camera::{Camera, CameraConfig},
+    material::{Dielectric, Lambertian, Light, Metal},
+    ray::Color,
+    texture::{CheckerTexture, ImageTexture},
+};
 use show_image::{create_window, event};
-use texture::ImageTexture;
 
-use crate::{bvh::BVHNode, texture::CheckerTexture};
-
-mod aabb;
-mod bvh;
-mod camera;
-mod common;
-mod material;
 mod math;
 mod object;
-mod ray;
-mod texture;
-mod vector;
+mod rendering;
 
 fn random_balls() -> (Camera, BVHNode) {
     let mut world = ObjectCollection::new();
@@ -81,7 +74,7 @@ fn random_balls() -> (Camera, BVHNode) {
 
     let camera = Camera::new(CameraConfig {
         image_width: 800,
-        samples_per_pixel: 1024,
+        samples_per_pixel: 100,
         defocus_angle: 0.6,
         vfov,
         look_from,
@@ -107,8 +100,8 @@ fn earth() -> (Camera, BVHNode) {
     let look_at = vec3(0.0, 1.0, 0.0);
 
     let camera = Camera::new(CameraConfig {
-        image_width: 2560,
-        samples_per_pixel: 2048,
+        image_width: 5120,
+        samples_per_pixel: 8192,
         defocus_angle: 0.0,
         vfov,
         look_from,

@@ -1,7 +1,7 @@
 use glam::{vec3, Vec3};
 use rand::distributions::{Distribution, Uniform};
 
-use crate::{common::Interval, math::random_range};
+use super::{random_range, Interval};
 
 pub trait VecExt {
     fn random() -> Self;

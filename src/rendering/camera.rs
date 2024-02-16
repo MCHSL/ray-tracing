@@ -4,11 +4,11 @@ use rand::distributions::{Distribution, Uniform};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
-    math::random,
+    math::{random, VecExt},
     object::Object,
-    ray::{Color, Ray},
-    vector::VecExt,
 };
+
+use super::ray::{Color, Ray};
 
 pub struct CameraConfig {
     pub aspect_ratio: f32,

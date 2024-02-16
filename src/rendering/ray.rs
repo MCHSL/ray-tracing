@@ -1,7 +1,9 @@
 use derive_more::{Add, From, Mul};
 use glam::Vec3;
 
-use crate::{material::Material, vector::VecExt};
+use crate::math::VecExt;
+
+use super::material::Material;
 
 #[derive(Clone, Copy, From, Add, Mul)]
 pub struct Color(pub Vec3);

@@ -1,8 +1,8 @@
 use glam::Vec3;
 
 use crate::{
-    common::{Interval, IntervalExt},
-    ray::Ray,
+    math::{Interval, IntervalExt},
+    rendering::ray::Ray,
 };
 
 #[derive(Debug, Clone)]
@@ -47,6 +47,27 @@ impl Aabb {
             2 => &self.z,
             _ => &self.x,
         }
+    }
+
+    pub fn pad(&self) -> Self {
+        let delta = 0.0001f32;
+        let x = if self.x.size() > delta {
+            self.x.clone()
+        } else {
+            self.x.expand(delta)
+        };
+        let y = if self.y.size() > delta {
+            self.y.clone()
+        } else {
+            self.y.expand(delta)
+        };
+        let z = if self.z.size() > delta {
+            self.z.clone()
+        } else {
+            self.z.expand(delta)
+        };
+
+        Self::new(x, y, z)
     }
 
     pub fn hit(&self, ray: Ray, range: &Interval) -> bool {

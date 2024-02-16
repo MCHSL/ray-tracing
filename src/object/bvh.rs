@@ -1,6 +1,12 @@
 use std::{cmp::Ordering, sync::Arc};
 
-use crate::{aabb::Aabb, math::random_int, object::Object};
+use crate::{
+    math::{random_int, Interval},
+    object::Object,
+    rendering::ray::{HitRecord, Ray},
+};
+
+use super::aabb::Aabb;
 
 pub struct BVHNode {
     left: Arc<dyn Object>,
@@ -78,11 +84,7 @@ impl BVHNode {
 }
 
 impl Object for BVHNode {
-    fn hit(
-        &self,
-        ray: crate::ray::Ray,
-        range: &crate::common::Interval,
-    ) -> Option<crate::ray::HitRecord> {
+    fn hit(&self, ray: Ray, range: &Interval) -> Option<HitRecord> {
         if !self.bbox.hit(ray, range) {
             return None;
         }
