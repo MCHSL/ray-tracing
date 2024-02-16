@@ -22,11 +22,11 @@ impl Light<SolidColor> {
 }
 
 impl<T: Texture> Material for Light<T> {
-    fn scatter(&self, _incoming: Ray, hit: &HitRecord) -> Option<ScatterResult> {
-        Some(ScatterResult {
-            attenuation: self.albedo.value(hit.u, hit.v, hit.point),
-            luminosity: 64.0,
-            new_ray: None,
-        })
+    fn scatter(&self, _incoming: Ray, _hit: &HitRecord) -> Option<ScatterResult> {
+        None
+    }
+
+    fn emit(&self, u: f32, v: f32, point: glam::Vec3) -> Color {
+        self.albedo.value(u, v, point)
     }
 }

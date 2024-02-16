@@ -46,7 +46,6 @@ impl Material for Dielectric {
 
         Some(ScatterResult {
             attenuation: Color::new(1.0, 1.0, 1.0),
-            luminosity: 1.0,
             new_ray: Some(new_ray),
         })
     }

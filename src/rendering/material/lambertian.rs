@@ -35,7 +35,6 @@ impl<T: Texture> Material for Lambertian<T> {
         let scattered = Ray::new(hit.point, direction, incoming.time);
         Some(ScatterResult {
             attenuation: self.albedo.value(hit.u, hit.v, hit.point),
-            luminosity: 1.0,
             new_ray: Some(scattered),
         })
     }

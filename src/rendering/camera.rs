@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use glam::{vec3, Vec3};
 use image::{ImageBuffer, Rgb};
 use rand::distributions::{Distribution, Uniform};
@@ -5,7 +7,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     math::{random, VecExt},
-    object::Object,
+    object::{bvh::BVHCollection, Object},
 };
 
 use super::ray::{Color, Ray};
@@ -154,29 +156,30 @@ impl Camera {
         (px * self.pixel_delta_u) + (py * self.pixel_delta_v)
     }
 
-    fn ray_color<T: Object>(&self, ray: Ray, bounces_left: u32, hittable: &T) -> Color {
+    fn ray_color(&self, ray: Ray, bounces_left: u32, world: &BVHCollection) -> Color {
         if bounces_left == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
 
-        if let Some(hit) = hittable.hit(ray, &(0.001..f32::MAX)) {
-            if let Some(scatter) = hit.material.scatter(ray, &hit) {
+        if let Some(hit) = world.hit(ray, &(0.001..f32::MAX)) {
+            let emission_color = hit.material.emit(hit.u, hit.v, hit.point);
+            let scatter_color = if let Some(scatter) = hit.material.scatter(ray, &hit) {
                 if let Some(new_ray) = scatter.new_ray {
-                    return Color::from(
-                        scatter.attenuation.0
-                            * self.ray_color(new_ray, bounces_left - 1, hittable).0
-                            * scatter.luminosity,
-                    );
+                    scatter.attenuation * self.ray_color(new_ray, bounces_left - 1, world)
+                } else {
+                    scatter.attenuation
                 }
-                return scatter.attenuation * scatter.luminosity;
-            }
-            return Color::new(0.0, 0.0, 0.0);
+            } else {
+                Color::new(0., 0., 0.)
+            };
+
+            return scatter_color + emission_color;
         }
 
         self.skybox
     }
 
-    pub fn render<T: Object + Sync>(&self, world: &T) -> image::RgbImage {
+    pub fn render(&self, world: &BVHCollection) -> image::RgbImage {
         let mut buffer: image::RgbImage = ImageBuffer::new(self.image_width, self.image_height);
 
         buffer

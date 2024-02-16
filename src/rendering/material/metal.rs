@@ -40,7 +40,6 @@ impl<T: Texture> Material for Metal<T> {
         );
         Some(ScatterResult {
             attenuation: self.albedo.value(hit.u, hit.v, hit.point),
-            luminosity: 1.0,
             new_ray: Some(new_ray),
         })
     }

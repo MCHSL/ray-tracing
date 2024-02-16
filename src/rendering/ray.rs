@@ -1,12 +1,21 @@
+use std::{ops::Mul, sync::Arc};
+
 use derive_more::{Add, From, Mul};
 use glam::Vec3;
 
-use crate::math::VecExt;
+use crate::{math::VecExt, object::Object};
 
 use super::material::Material;
 
-#[derive(Clone, Copy, From, Add, Mul)]
+#[derive(Clone, Copy, From, Add)]
 pub struct Color(pub Vec3);
+
+impl Mul for Color {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::from(self.0 * rhs.0)
+    }
+}
 
 impl Color {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
@@ -40,6 +49,7 @@ impl Ray {
 }
 
 pub struct HitRecord<'a> {
+    pub object: &'a dyn Object,
     pub point: Vec3,
     pub normal: Vec3,
     pub material: &'a dyn Material,
@@ -51,6 +61,7 @@ pub struct HitRecord<'a> {
 
 impl<'a> HitRecord<'a> {
     pub fn new(
+        object: &'a dyn Object,
         ray: Ray,
         point: Vec3,
         outward_normal: Vec3,
@@ -67,6 +78,7 @@ impl<'a> HitRecord<'a> {
         };
 
         Self {
+            object,
             point,
             normal,
             material,

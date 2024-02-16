@@ -1,12 +1,14 @@
 use std::{cmp::Ordering, sync::Arc};
 
+use glam::vec3;
+
 use crate::{
     math::{random_int, Interval},
     object::Object,
     rendering::ray::{HitRecord, Ray},
 };
 
-use super::aabb::Aabb;
+use super::{aabb::Aabb, collection::ObjectCollection};
 
 pub struct BVHNode {
     left: Arc<dyn Object>,
@@ -103,5 +105,41 @@ impl Object for BVHNode {
 
     fn bounding_box(&self) -> &Aabb {
         &self.bbox
+    }
+
+    fn position(&self) -> glam::Vec3 {
+        vec3(0., 0., 0.)
+    }
+}
+
+pub struct BVHCollection {
+    root: BVHNode,
+    lights: Vec<Arc<dyn Object>>,
+}
+
+impl BVHCollection {
+    pub fn from_simple_collection(collection: &ObjectCollection) -> Self {
+        Self {
+            root: BVHNode::new(collection.objects()),
+            lights: collection.lights().clone(),
+        }
+    }
+
+    pub fn lights(&self) -> &[Arc<dyn Object>] {
+        &self.lights
+    }
+}
+
+impl Object for BVHCollection {
+    fn hit(&self, ray: Ray, range: &Interval) -> Option<HitRecord> {
+        self.root.hit(ray, range)
+    }
+
+    fn bounding_box(&self) -> &Aabb {
+        self.root.bounding_box()
+    }
+
+    fn position(&self) -> glam::Vec3 {
+        vec3(0., 0., 0.)
     }
 }

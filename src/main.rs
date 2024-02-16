@@ -2,9 +2,13 @@ use std::env;
 
 use glam::vec3;
 use math::{random, random_range};
-use object::{bvh::BVHNode, collection::ObjectCollection, types::Sphere};
+use object::{
+    bvh::{BVHCollection, BVHNode},
+    collection::ObjectCollection,
+    types::{Quad, Sphere},
+};
 use rendering::{
-    camera::{Camera, CameraConfig},
+    camera::{self, Camera, CameraConfig},
     material::{Dielectric, Lambertian, Light, Metal},
     ray::Color,
     texture::{CheckerTexture, ImageTexture},
@@ -15,7 +19,7 @@ mod math;
 mod object;
 mod rendering;
 
-fn random_balls() -> (Camera, BVHNode) {
+fn random_balls() -> (Camera, BVHCollection) {
     let mut world = ObjectCollection::new();
 
     let checkers =
@@ -60,13 +64,11 @@ fn random_balls() -> (Camera, BVHNode) {
         Lambertian::solid_color(Color::new(0.4, 0.2, 0.1)),
     ));
 
-    world.add(Sphere::new(
+    world.add_light(Sphere::new(
         vec3(4.0, 1.0, 0.0),
-        0.1,
-        Light::solid_color(Color::new(0.7, 0.6, 0.5)), //Metal::solid_color(Color::new(0.7, 0.6, 0.5), 0.1),
+        0.2,
+        Light::solid_color(Color::new(2.0, 2.0, 2.0)), //Metal::solid_color(Color::new(0.7, 0.6, 0.5), 0.1),
     ));
-
-    let world = BVHNode::new(world.objects());
 
     let vfov = 20.0;
     let look_from = vec3(13.0, 2.0, 3.0);
@@ -74,26 +76,25 @@ fn random_balls() -> (Camera, BVHNode) {
 
     let camera = Camera::new(CameraConfig {
         image_width: 800,
-        samples_per_pixel: 100,
-        defocus_angle: 0.6,
+        samples_per_pixel: 1000,
+        defocus_angle: 0.0,
         vfov,
         look_from,
         look_at,
+        skybox: Color::new(0., 0., 0.),
         ..Default::default()
     });
 
-    (camera, world)
+    (camera, world.as_bvh())
 }
 
-fn earth() -> (Camera, BVHNode) {
+fn earth() -> (Camera, BVHCollection) {
     let mut world = ObjectCollection::new();
     world.add(Sphere::new(
         vec3(0., 1.0, 0.0),
         1.0,
         Lambertian::new(ImageTexture::from_file("earthmap.jpg")),
     ));
-
-    let world = BVHNode::new(world.objects());
 
     let vfov = 45.0;
     let look_from = vec3(3., 2.0, -1.0);
@@ -109,7 +110,66 @@ fn earth() -> (Camera, BVHNode) {
         ..Default::default()
     });
 
-    (camera, world)
+    (camera, world.as_bvh())
+}
+
+fn quads() -> (Camera, BVHCollection) {
+    let mut world = ObjectCollection::new();
+
+    let red = Lambertian::solid_color(Color::new(1.0, 0.2, 0.2));
+    let green = Lambertian::solid_color(Color::new(0.2, 1.0, 0.2));
+    let blue = Lambertian::solid_color(Color::new(0.2, 0.2, 1.0));
+    let orange = Lambertian::solid_color(Color::new(1.0, 0.5, 0.0));
+    let teal = Lambertian::solid_color(Color::new(0.2, 0.8, 0.8));
+
+    world.add(Quad::new(
+        vec3(-3., -2., 5.),
+        vec3(0., 0., -4.),
+        vec3(0., 4., 0.),
+        red,
+    ));
+
+    world.add(Quad::new(
+        vec3(-2., -2., 0.),
+        vec3(4., 0., 0.),
+        vec3(0., 4., 0.),
+        green,
+    ));
+
+    world.add(Quad::new(
+        vec3(3., -2., 1.),
+        vec3(0., 0., 4.),
+        vec3(0., 4., 0.),
+        blue,
+    ));
+
+    world.add(Quad::new(
+        vec3(-2., 3., 1.),
+        vec3(4., 0., 0.),
+        vec3(0., 0., 4.),
+        orange,
+    ));
+
+    world.add(Quad::new(
+        vec3(-2., -3., 5.),
+        vec3(4., 0., 0.),
+        vec3(0., 0., -4.),
+        teal,
+    ));
+
+    let camera = Camera::new(CameraConfig {
+        aspect_ratio: 1.0,
+        image_width: 400,
+        samples_per_pixel: 100,
+        max_bounces: 50,
+        vfov: 80.0,
+        look_from: vec3(0., 0., 9.),
+        look_at: vec3(0., 0., 0.),
+        defocus_angle: 0.0,
+        ..Default::default()
+    });
+
+    (camera, world.as_bvh())
 }
 
 #[show_image::main]
@@ -118,6 +178,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (camera, world) = match scene.as_str() {
         "balls" => random_balls(),
         "earth" => earth(),
+        "quads" => quads(),
         _ => panic!("Nonexistent scene"),
     };
     let image = camera.render(&world);

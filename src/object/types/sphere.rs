@@ -86,6 +86,7 @@ impl<M: Material> Object for Sphere<M> {
         let (u, v) = self.get_uv(normal);
 
         Some(HitRecord::new(
+            self,
             ray,
             point,
             normal,
@@ -98,5 +99,9 @@ impl<M: Material> Object for Sphere<M> {
 
     fn bounding_box(&self) -> &Aabb {
         &self.bbox
+    }
+
+    fn position(&self) -> glam::Vec3 {
+        self.start_center
     }
 }
